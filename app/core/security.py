@@ -10,7 +10,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     try:
         user = supabase.auth.get_user(token)
         if not user:
-             raise HTTPException(
+            raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",
                 headers={"WWW-Authenticate": "Bearer"},

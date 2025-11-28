@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, status
 from app.core.database import supabase
 from app.schemas.auth import UserSignup, UserLogin, Token
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter(tags=["Auth"])
 
-@router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def signup(user: UserSignup):
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register(user: UserSignup):
     try:
         auth_response = supabase.auth.sign_up({
             "email": user.email,
@@ -19,9 +19,20 @@ async def signup(user: UserSignup):
         })
         
         if not auth_response.user:
-            raise HTTPException(status_code=400, detail="Signup failed")
+            raise HTTPException(status_code=400, detail="Falha no cadastro.")
 
-        return {"message": "User created successfully. Please check your email to confirm."}
+        try:
+            supabase.table("profiles").insert({
+                "id": str(auth_response.user.id),
+                "role": user.role,
+                "display_name": user.display_name,
+            }).execute()
+        except Exception as profile_e:
+            supabase.auth.admin.delete_user(auth_response.user.id)
+            raise HTTPException(status_code=500, detail=f"Erro ao criar perfil. Cadastro desfeito: {str(profile_e)}")
+
+
+        return {"message": "Usuário criado com sucesso. Verifique seu e-mail para confirmar."}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -35,7 +46,7 @@ async def login(user: UserLogin):
         })
         
         if not auth_response.session:
-             raise HTTPException(status_code=401, detail="Invalid credentials")
+             raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
         return {
             "access_token": auth_response.session.access_token,
@@ -43,4 +54,4 @@ async def login(user: UserLogin):
             "user": auth_response.user.model_dump()
         }
     except Exception as e:
-         raise HTTPException(status_code=400, detail=str(e))
+          raise HTTPException(status_code=400, detail=str(e))
