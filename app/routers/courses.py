@@ -41,7 +41,6 @@ async def get_courses_by_category(area: str):
     except Exception as e:
         return []
 
-
 @router.post("/", response_model=CourseResponse)
 async def create_course(
     title: str = Form(...),
@@ -54,7 +53,7 @@ async def create_course(
     try:
         profile_res = supabase.table("profiles").select("role").eq("id", current_user.id).execute()
         if not profile_res.data or profile_res.data[0]['role'] != 'institution':
-             raise HTTPException(
+            raise HTTPException(
                 status_code=http_status.HTTP_403_FORBIDDEN,
                 detail="Apenas instituições podem criar cursos."
             )
@@ -62,7 +61,6 @@ async def create_course(
         if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=f"Erro ao verificar permissão: {str(e)}")
 
-    # Upload da Imagem
     try:
         file_content = await thumbnail.read()
         file_path = f"{current_user.id}/{thumbnail.filename}"
@@ -78,7 +76,6 @@ async def create_course(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro no upload da imagem: {str(e)}")
 
-    # Salvar no Banco
     course_data = {
         "institution_id": current_user.id,
         "title": title,
@@ -91,7 +88,7 @@ async def create_course(
     try:
         data = supabase.table("courses").insert(course_data).execute()
         if not data.data:
-             raise HTTPException(status_code=500, detail="Falha ao criar registro do curso")
+            raise HTTPException(status_code=500, detail="Falha ao criar registro do curso")
         return data.data[0]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
@@ -129,10 +126,10 @@ async def update_course(
         if not existing.data:
             raise HTTPException(status_code=404, detail="Curso não encontrado")
         if existing.data[0]['institution_id'] != current_user.id:
-             raise HTTPException(status_code=403, detail="Sem permissão para editar este curso")
+            raise HTTPException(status_code=403, detail="Sem permissão para editar este curso")
     except Exception as e:
-         if isinstance(e, HTTPException): raise e
-         raise HTTPException(status_code=500, detail=str(e))
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
 
     update_data = course_update.model_dump(exclude_unset=True, mode='json')
     
@@ -149,10 +146,10 @@ async def delete_course(course_id: UUID, current_user: dict = Depends(get_curren
         if not existing.data:
             raise HTTPException(status_code=404, detail="Curso não encontrado")
         if existing.data[0]['institution_id'] != current_user.id:
-             raise HTTPException(status_code=403, detail="Sem permissão para deletar este curso")
+            raise HTTPException(status_code=403, detail="Sem permissão para deletar este curso")
     except Exception as e:
-         if isinstance(e, HTTPException): raise e
-         raise HTTPException(status_code=500, detail=str(e))
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=str(e))
     
     try:
         supabase.table("courses").delete().eq("id", str(course_id)).execute()

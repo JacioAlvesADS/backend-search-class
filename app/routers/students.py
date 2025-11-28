@@ -25,7 +25,7 @@ async def list_favorites(user_id: UUID, current_user: dict = Depends(get_current
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{user_id}/favoritos/{course_id}", status_code=200)
-async def toggle_favorite(user_id: UUID, course_id: UUID, current_user: dict = Depends(get_current_user)):
+async def add_favorite(user_id: UUID, course_id: UUID, current_user: dict = Depends(get_current_user)):
     if str(user_id) != current_user.id:
         raise HTTPException(status_code=403, detail="Não autorizado a alterar favoritos de outro usuário")
         
@@ -36,15 +36,37 @@ async def toggle_favorite(user_id: UUID, course_id: UUID, current_user: dict = D
         existing = supabase.table("favorites").select("*").eq("user_id", uid_str).eq("course_id", cid_str).execute()
         
         if existing.data:
-            supabase.table("favorites").delete().eq("user_id", uid_str).eq("course_id", cid_str).execute()
-            return {"message": "Removido dos favoritos"}
-        else:
-            supabase.table("favorites").insert({"user_id": uid_str, "course_id": cid_str}).execute()
-            return {"message": "Adicionado aos favoritos"}
+            raise HTTPException(status_code=400, detail="Curso já está nos favoritos")
+        
+        supabase.table("favorites").insert({"user_id": uid_str, "course_id": cid_str}).execute()
+        return {"message": "Adicionado aos favoritos"}
             
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro no banco: {str(e)}")
 
+@router.delete("/{user_id}/favoritos/{course_id}", status_code=200)
+async def remove_favorite(user_id: UUID, course_id: UUID, current_user: dict = Depends(get_current_user)):
+    if str(user_id) != current_user.id:
+        raise HTTPException(status_code=403, detail="Não autorizado a alterar favoritos de outro usuário")
+        
+    uid_str = current_user.id
+    cid_str = str(course_id)
+    
+    try:
+        existing = supabase.table("favorites").select("*").eq("user_id", uid_str).eq("course_id", cid_str).execute()
+        
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Curso não está nos favoritos")
+        
+        supabase.table("favorites").delete().eq("user_id", uid_str).eq("course_id", cid_str).execute()
+        return {"message": "Removido dos favoritos"}
+            
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro no banco: {str(e)}")
 
 @router.post("/{user_id}/enroll/{course_id}")
 async def enroll_course(user_id: UUID, course_id: UUID, current_user: dict = Depends(get_current_user)):
@@ -57,7 +79,7 @@ async def enroll_course(user_id: UUID, course_id: UUID, current_user: dict = Dep
     try:
         existing = supabase.table("enrollments").select("*").eq("user_id", uid_str).eq("course_id", cid_str).execute()
         if existing.data:
-             raise HTTPException(status_code=400, detail="Você já está matriculado neste curso")
+            raise HTTPException(status_code=400, detail="Você já está matriculado neste curso")
         
         supabase.table("enrollments").insert({"user_id": uid_str, "course_id": cid_str, "progress": 0}).execute()
         return {"message": "Matrícula realizada com sucesso"}

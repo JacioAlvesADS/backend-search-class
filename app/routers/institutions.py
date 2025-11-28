@@ -15,7 +15,7 @@ async def list_institutions():
         if not res.data:
             return []
         
-        return res.data 
+        return res.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar instituições: {str(e)}")
 
