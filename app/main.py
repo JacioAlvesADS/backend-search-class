@@ -1,6 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import courses, students, auth
+from app.routers import auth
+from app.routers import courses
+from app.routers import students
+from app.routers import institutions
+from app.routers import search
 from app.core.config import settings
 
 app = FastAPI(
@@ -12,6 +16,8 @@ app = FastAPI(
 origins = [
     "http://localhost",
     "http://localhost:3000",
+    "http://localhost:4200",
+    "*"
 ]
 
 app.add_middleware(
@@ -22,10 +28,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-app.include_router(courses.router)
-app.include_router(students.router)
+
+api_router = APIRouter(prefix="/api")
+
+api_router.include_router(auth.router)
+api_router.include_router(courses.router)
+api_router.include_router(students.router)
+api_router.include_router(institutions.router)
+api_router.include_router(search.router)
+
+app.include_router(api_router)
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Course Platform API"}
+    return {"message": "API Online. Use /docs para ver os endpoints."}
