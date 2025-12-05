@@ -32,7 +32,7 @@ create table public.courses (
 );
 
 -- 3. Trigger para criar perfil automaticamente ao cadastrar usuário
--- (opcional, mas recomendado para o Auth funcionar com a tabela profiles)
+-- (Opcional, mas recomendado para o Auth funcionar com a tabela profiles)
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
@@ -45,3 +45,22 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+```
+
+## 2. Configuração de Storage (Imagens)
+
+O projeto requer um bucket de armazenamento para as capas dos cursos.
+
+1.  No painel do Supabase, vá em **Storage**.
+2.  Crie um novo bucket chamado: `course-covers`.
+3.  Defina o bucket como **Public**.
+
+## 3. Variáveis de Ambiente
+
+O arquivo `.env` no backend deve conter as credenciais do projeto:
+
+```env
+SUPABASE_URL=https://seu-projeto-id.supabase.co
+SUPABASE_KEY=sua-chave-anon-publica
+SECRET_KEY=sua-chave-secreta-para-jwt
+```
