@@ -1,57 +1,37 @@
 from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel
 from app.core.database import supabase
-from app.schemas.auth import UserSignup, UserLogin, Token
 
-router = APIRouter(tags=["Auth"])
+router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(user: UserSignup):
+class LoginSchema(BaseModel):
+    email: str
+    password: str
+
+@router.post("/login")
+async def login(data: LoginSchema):
     try:
-        auth_response = supabase.auth.sign_up({
-            "email": user.email,
-            "password": user.password,
-            "options": {
-                "data": {
-                    "display_name": user.display_name,
-                    "role": user.role
-                }
-            }
+        response = supabase.auth.sign_in_with_password({
+            "email": data.email, 
+            "password": data.password
         })
         
-        if not auth_response.user:
-            raise HTTPException(status_code=400, detail="Falha no cadastro.")
-
-        try:
-            supabase.table("profiles").insert({
-                "id": str(auth_response.user.id),
-                "role": user.role,
-                "display_name": user.display_name,
-            }).execute()
-        except Exception as profile_e:
-            supabase.auth.admin.delete_user(auth_response.user.id)
-            raise HTTPException(status_code=500, detail=f"Erro ao criar perfil. Cadastro desfeito: {str(profile_e)}")
-
-
-        return {"message": "Usuário criado com sucesso. Verifique seu e-mail para confirmar."}
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/login", response_model=Token)
-async def login(user: UserLogin):
-    try:
-        auth_response = supabase.auth.sign_in_with_password({
-            "email": user.email,
-            "password": user.password
-        })
-        
-        if not auth_response.session:
-             raise HTTPException(status_code=401, detail="Credenciais inválidas")
+        if not response.user:
+            raise HTTPException(status_code=400, detail="Login falhou")
 
         return {
-            "access_token": auth_response.session.access_token,
+            "access_token": response.session.access_token,
             "token_type": "bearer",
-            "user": auth_response.user.model_dump()
+            "user": {
+                "id": response.user.id,
+                "email": response.user.email,
+                "user_metadata": response.user.user_metadata
+            }
         }
+        
     except Exception as e:
-          raise HTTPException(status_code=400, detail=str(e))
+        print(f"Erro no login: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="E-mail ou senha incorretos."
+        )
